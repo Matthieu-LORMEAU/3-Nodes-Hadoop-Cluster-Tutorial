@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Setting up a 3 nodes Hadoop cluster : complete tutorial</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.2/dist/katex.min.css" integrity="sha384-yFRtMMDnQtDRO8rLpMIKrtPCD5jdktao2TV19YiZYWMDkUR5GQZR/NOVTdquEx1j" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+        <link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <style>
+.task-list-item { list-style-type: none; } .task-list-item-checkbox { margin-left: -20px; vertical-align: middle; }
+</style>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        
+        <script src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+    </head>
+    <body class="vscode-light">
+        <body style:"margin-left:150px,">
+<style>
+body {
+margin : 50px 150px 50px 150px;
+font-size:1.1em;
+}
+.indented-section {
+margin-left : 50px;
+}
+</style>
+<h1 id="setting-up-a-3-nodes-hadoop-cluster--complete-tutorial">Setting up a 3 nodes Hadoop cluster : complete tutorial</h1>
+<p><br><br></p>
+<ul>
+<li><a href="#setting-up-a-3-nodes-hadoop-cluster--complete-tutorial">Setting up a 3 nodes Hadoop cluster : complete tutorial</a>
+<ul>
+<li><a href="#1-choosing-your-compute-instances-servers">1. Choosing your compute instances (servers)</a>
+<ul>
+<li><a href="#1st-instance--master-node">1st instance : master node</a></li>
+<li><a href="#2nd-and-3nd-instances--slave-nodes">2nd and 3nd instances : slave nodes</a></li>
+</ul>
+</li>
+<li><a href="#2-setting-up-the-servers-so-that-they-can-communicate">2. Setting up the servers so that they can communicate</a>
+<ul>
+<li><a href="#a-set-up-hostnames-on-all-3-instances">a. Set up hostnames on all 3 instances</a></li>
+<li><a href="#b-set-up-ssh-between-master-and-slave-instances">b. Set up ssh between master and slave instances</a></li>
+</ul>
+</li>
+<li><a href="#3-install-ambari-on-the-master-server">3. Install Ambari on the master server</a>
+<ul>
+<li><a href="#a-download-the-ambari-repository">a. Download the Ambari Repository</a></li>
+<li><a href="#b-install-the-ambari-server">b. Install the Ambari Server</a></li>
+<li><a href="#c-set-up-the-ambari-server">c. Set Up the Ambari Server</a></li>
+</ul>
+</li>
+<li><a href="#4-open-ports-on-your-cloud-provider-azure-google-cloud-aws">4. Open ports on your cloud provider (Azure, Google Cloud, AWS ...)</a></li>
+<li><a href="#5-deploy-your-cluster">5. Deploy your cluster</a>
+<ul>
+<li><a href="#a-create-the-cluster">a. Create the cluster</a>
+<ul>
+<li><a href="#step-1--launch-the-ambari-cluster-install-wizard">Step 1 : Launch the Ambari Cluster Install Wizard</a></li>
+<li><a href="#step-2--name-your-cluster">Step 2 : Name Your Cluster</a></li>
+<li><a href="#step-3--select-version">Step 3 : Select Version</a></li>
+<li><a href="#step-4--install-options">Step 4 : Install Options</a></li>
+<li><a href="#step-5--confirm-hosts">Step 5 : Confirm Hosts</a></li>
+<li><a href="#step-6--choose-services">Step 6 : Choose Services</a></li>
+<li><a href="#step-7--assign-masters">Step 7 : Assign Masters</a></li>
+<li><a href="#step-8--assign-slaves-and-clients">Step 8 : Assign Slaves and Clients</a></li>
+<li><a href="#step-9--customize-services">Step 9 : Customize Services</a></li>
+<li><a href="#step-10--review">Step 10 : Review</a></li>
+<li><a href="#step-11--install">Step 11 : Install</a></li>
+</ul>
+</li>
+<li><a href="#b-increase-yarn-capacity-scheduler-maximum-resource-percent">b. Increase YARN capacity scheduler maximum resource percent</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><br><br></p>
+<h2 id="1-choosing-your-compute-instances-servers">1. Choosing your compute instances (servers)</h2>
+<hr>
+<div class="indented-section">
+<p><br><br></p>
+<p>Pick Centos 7 instances (Red Hat 7 should also work).</p>
+<p>Google Cloud platform provides 300$ free credit and allows up to 8 cpu cores accross all instances. This isn't the case of all providers ; if you want to have solid compute instances for free, you should check google's cloud platform.</p>
+<p><strong>Also remember to poweroff your instances when you don't use them, as they don't consume credit when they are turned off.</strong></p>
+<br>
+<h4 id="1st-instance--master-node">1st instance : master node</h4>
+<blockquote>
+<p>At least 25 gb of ram</p>
+</blockquote>
+<p>I personally used an instance with 32 gb of ram and 4 cores.</p>
+<br>
+<h4 id="2nd-and-3nd-instances--slave-nodes">2nd and 3nd instances : slave nodes</h4>
+<blockquote>
+<p>At least 16 gb of ram</p>
+</blockquote>
+<p>I used two instances with 16 gb of ram and 2 cores each.</p>
+<p><br><br></p>
+</div>
+<h2 id="2-setting-up-the-servers-so-that-they-can-communicate">2. Setting up the servers so that they can communicate</h2>
+<hr>
+<p><br><br></p>
+<div class="indented-section">
+<p>On all instances :</p>
+<pre><code><code><div>sudo su root
+yum install nano -y
+yum install wget -y
+setenforce 0
+umask 0022
+echo umask 0022 &gt;&gt; /etc/profile
+systemctl disable firewalld
+service firewalld stop
+</div></code></code></pre>
+<p>You need to be root during the whole tutorial.</p>
+<br>
+</div>
+<h3 id="a-set-up-hostnames-on-all-3-instances">a. Set up hostnames on all 3 instances</h3>
+<hr>
+<br>
+<div class="indented-section">
+<p>For our Twitter analysis application, I chose the following hostnames but you can choose any hostnames that you like. Please bear in mind that these hostnames are local but you don't need to buy real domain names.</p>
+<p><a href="http://master.twitter-multi.com">master.twitter-multi.com</a> <br/><br>
+<a href="http://slave-1.twitter-multi.com">slave-1.twitter-multi.com</a><br/><br>
+<a href="http://slave-2.twitter-multi.com">slave-2.twitter-multi.com</a></p>
+<p>On master node :</p>
+<pre><code><code><div>hostname master.twitter-multi.com
+nano /etc/hostname
+</div></code></code></pre>
+<p>Replace the current value with <em><a href="http://master.twitter-multi.com">master.twitter-multi.com</a></em>. Save and exit (ctrl + o and ctrl + x).</p>
+<pre><code><code><div>nano /etc/hosts
+</div></code></code></pre>
+<p>Your file should like this :</p>
+<pre><code><code><div>127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.132.0.13 master.twitter-multi.com # this is the private IP of the server
+34.76.236.54 slave-1.twitter-multi.com
+35.195.162.0 slave-2.twitter-multi.com
+169.254.169.254 metadata.google.internal  # Added by Google. You can ignore this line
+</div></code></code></pre>
+<p>On slave 1 :</p>
+<pre><code><code><div>hostname slave-1.twitter-multi.com
+nano /etc/hostname
+</div></code></code></pre>
+<p>Replace the current value with <em><a href="http://slave-1.twitter-multi.com">slave-1.twitter-multi.com</a></em>. Save and exit (ctrl + o and ctrl + x).</p>
+<pre><code><code><div>nano /etc/hosts
+</div></code></code></pre>
+<p>Your file should look like this :</p>
+<pre><code><code><div>127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.132.0.14 slave-1.twitter-multi.com  # this is the private IP of the server
+35.195.162.0 slave-2.twitter-multi.com
+34.76.149.62 master.twitter-multi.com
+169.254.169.254 metadata.google.internal  # Added by Google. You can ignore this line
+</div></code></code></pre>
+<p>On slave 2 :</p>
+<pre><code><code><div>hostname slave-2.twitter-multi.com
+nano /etc/hostname
+</div></code></code></pre>
+<p>Replace the current value with <em><a href="http://slave-2.twitter-multi.com">slave-2.twitter-multi.com</a></em>. Save and exit (ctrl + o and ctrl + x).</p>
+<pre><code><code><div>nano /etc/hosts
+</div></code></code></pre>
+<pre><code><code><div>127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.132.0.15 slave-2.twitter-multi.com # this is the private IP of the server
+34.76.236.54 slave-1.twitter-multi.com
+34.76.149.62 master.twitter-multi.com
+169.254.169.254 metadata.google.internal  # Added by Google. You can ignore this line
+</div></code></code></pre>
+</div>
+<br>
+<h3 id="b-set-up-ssh-between-master-and-slave-instances">b. Set up ssh between master and slave instances</h3>
+<hr>
+<div class="indented-section">
+<br>
+<p>On all instances :</p>
+<pre><code><code><div>nano /etc/ssh/sshd_config
+</div></code></code></pre>
+<p>Change the corresponding lines to :</p>
+<pre><code><code><div>
+PermitRootLogin yes
+PubkeyAuthentication yes
+PasswordAuthentication yes
+</div></code></code></pre>
+<p>Save and exit (ctrl + o and ctrl + x).</p>
+<pre><code><code><div>service sshd restart
+</div></code></code></pre>
+<p>On master node :</p>
+<pre><code><code><div>cd
+ssh-keygen # press enter to accept defaults
+cd .ssh
+cat id_rsa.pub &gt;&gt; authorized_keys
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+cat id_rsa.pub # shows the public key that will be copied an instances
+</div></code></code></pre>
+<p>On slave-1 and slave-2 :</p>
+<pre><code><code><div>mkdir .ssh
+cd .ssh/
+nano authorized_keys
+</div></code></code></pre>
+<p>Paste exactly the content from the <em>cat id_rsa.pub</em> command on master node. Save and exit (ctrl + o and ctrl + x).</p>
+<pre><code><code><div>chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+</div></code></code></pre>
+</div>
+<br><br>
+<h2 id="3-install-ambari-on-the-master-server">3. Install Ambari on the master server</h2>
+<hr>
+<br>
+<div class="indented-section">
+<p>We will now start the installation of the Hadoop cluster. Ambari is a useful tool to build the cluster automatically and manage it afterwards.<br/><br/><br>
+The following steps follow the tutorial from the cloudera installation guide :<br>
+<a href="https://docs.cloudera.com/HDPDocuments/Ambari-2.7.4.0/bk_ambari-installation/content/ch_Installing_Ambari.html">https://docs.cloudera.com/HDPDocuments/Ambari-2.7.4.0/bk_ambari-installation/content/ch_Installing_Ambari.html</a><br>
+<br/><br>
+These steps are susceptible to change if you install another version of ambari.</p>
+<p>Make sure you are still logged in as root (<em>sudo su root</em>).<br>
+Now let's get started !</p>
+</div>
+<br>
+<h3 id="a-download-the-ambari-repository">a. Download the Ambari Repository</h3>
+<hr>
+<br>
+<div class="indented-section">
+<p>Download the Ambari repository file to a directory on your master node.</p>
+<pre><code><code><div>wget -nv http://public-repo-1.hortonworks.com/ambari/centos7/2.x/updates/2.7.4.0/ambari.repo -O /etc/yum.repos.d/ambari.repo
+</div></code></code></pre>
+<p>Confirm that the repository is configured by checking the repo list.</p>
+<pre><code><code><div>yum repolist
+</div></code></code></pre>
+<p>You should see values similar to the following for Ambari repositories in the list.</p>
+<pre><code><code><div>repo id                    repo name                                       status
+ambari-2.7.4.0-118        ambari Version - ambari-2.7.4.0-118            12
+epel/x86_64                Extra Packages for Enterprise Linux 7 - x86_64  11,387
+ol7_UEKR4/x86_64           Latest Unbreakable Enterprise Kernel Release 4
+                            for Oracle Linux 7Server (x86_64)   295
+ol7_latest/x86_64          Oracle Linux 7Server Latest (x86_64)            18,642
+puppetlabs-deps/x86_64     Puppet Labs Dependencies El 7 - x86_64          17
+puppetlabs-products/x86_64 Puppet Labs Products El 7 - x86_64              225
+ repolist: 30,578
+</div></code></code></pre>
+</div>
+<br>
+<h3 id="b-install-the-ambari-server">b. Install the Ambari Server</h3>
+<hr>
+<br>
+<div class="indented-section">
+<p>Install the Ambari bits. This also installs the default PostgreSQL Ambari database. The following steps are still only on master node.</p>
+<pre><code><code><div>yum install ambari-server
+</div></code></code></pre>
+<p>Enter y when prompted to confirm transaction and dependency checks.</p>
+<p>A successful installation displays output similar to the following:</p>
+<pre><code><code><div>Installing : postgresql-libs-9.2.18-1.el7.x86_64         1/4
+Installing : postgresql-9.2.18-1.el7.x86_64              2/4
+Installing : postgresql-server-9.2.18-1.el7.x86_64       3/4
+Installing : ambari-server-2.7.4.0-118.x86_64           4/4
+Verifying  : ambari-server-2.7.4.0-118.x86_64           1/4
+Verifying  : postgresql-9.2.18-1.el7.x86_64              2/4
+Verifying  : postgresql-server-9.2.18-1.el7.x86_64       3/4
+Verifying  : postgresql-libs-9.2.18-1.el7.x86_64         4/4
+
+Installed:
+  ambari-server.x86_64 0:2.7.4.0-118
+Dependency Installed:
+ postgresql.x86_64 0:9.2.18-1.el7
+ postgresql-libs.x86_64 0:9.2.18-1.el7
+ postgresql-server.x86_64 0:9.2.18-1.el7
+Complete!
+</div></code></code></pre>
+</div>
+<br>
+<h3 id="c-set-up-the-ambari-server">c. Set Up the Ambari Server</h3>
+<hr>
+<br>
+<div class="indented-section">
+<p>On master node :</p>
+<pre><code><code><div>ambari-server setup
+</div></code></code></pre>
+<p>Respond to the setup prompt:</p>
+<ul>
+<li>
+<p>If you have not temporarily disabled SELinux, you may get a warning. Accept the default (y), and continue.</p>
+</li>
+<li>
+<p>By default, Ambari Server runs under root. Accept the default (n) at the Customize user account for ambari-server daemon prompt, to proceed as root. If you want to create a different user to run the Ambari Server, or to assign a previously created user, select y at the Customize user account for ambari-server daemon prompt, then provide a user name.</p>
+</li>
+<li>
+<p>If you have not temporarily disabled iptables you may get a warning. Enter y to continue.</p>
+</li>
+<li>
+<p>Select a JDK version to download. Enter 1 to download Oracle JDK 1.8.</p>
+</li>
+<li>
+<p>Review the GPL license agreement when prompted. To explicitly enable Ambari to download and install LZO data compression libraries, you must answer y.</p>
+</li>
+<li>
+<p>Select n at Enter advanced database configuration to use the default, embedded PostgreSQL database for Ambari. The default PostgreSQL database name is ambari. The default user name and password are ambari/bigdata.</p>
+</li>
+</ul>
+<p>Our master node needs to be able to access the Hive MySql server. Run the following for that :</p>
+<pre><code><code><div>yum install mysql-connector-java*
+ambari-server setup --jdbc-db=mysql --jdbc-driver=/usr/share/java/mysql-connector-java.jar
+</div></code></code></pre>
+<p>The path <em>/usr/share/java/mysql-connector-java.jar</em> might change. Make sure it is indeed at this location</p>
+<p>Restart ambari :</p>
+<pre><code><code><div>ambari-server restart
+</div></code></code></pre>
+</div>
+<br><br>
+<h2 id="4-open-ports-on-your-cloud-provider-azure-google-cloud-aws">4. Open ports on your cloud provider (Azure, Google Cloud, AWS ...)</h2>
+<hr>
+<div class="indented-section">
+<br>
+<p>If you don't want to run into any port pronblem,<br>
+I recommend opening all ports <strong>between the instances</strong>, in other words opening all ports <strong>only for your instances public IP addresses</strong>.</p>
+<p>In addition, you will need to open some ports publicly (i.e for all IP addresses) such as the ambari port (8080), or any other service's port that you might want to access inside your browser.</p>
+</div>
+<p><br><br></p>
+<h2 id="5-deploy-your-cluster">5. Deploy your cluster</h2>
+<hr>
+<div class="indented-section">
+<br>
+<p>Once your ports are opened, you can connect to ambari at the following address :</p>
+<pre><code><code><div>http://&lt;your.server.public.ip.address&gt;:8080
+</div></code></code></pre>
+<p>Username / Password : admin / admin</p>
+</div>
+<br>
+<h3 id="a-create-the-cluster">a. Create the cluster</h3>
+<hr>
+<br>
+<div class="indented-section">
+<h4 id="step-1--launch-the-ambari-cluster-install-wizard">Step 1 : Launch the Ambari Cluster Install Wizard</h4>
+<blockquote>
+<p>Launch the install wizard</p>
+</blockquote>
+<h4 id="step-2--name-your-cluster">Step 2 : Name Your Cluster</h4>
+<blockquote>
+<p>Input a name for your cluster : don't use spaces or special characters</p>
+</blockquote>
+<h4 id="step-3--select-version">Step 3 : Select Version</h4>
+<blockquote>
+<p>Leave the default version. <br/><br>
+Leave the repositeries matching your linux distribution and remove the others. CentOS repos are the redhat7 ones.<br>
+<br/> Leave the other default options.</p>
+</blockquote>
+<h4 id="step-4--install-options">Step 4 : Install Options</h4>
+<blockquote>
+<p>Input your hostnames. In our case it looks like this :</p>
+</blockquote>
+<pre><code><code><div>master.twitter-multi.com
+slave-1.twitter-multi.com
+slave-2.twitter-multi.com
+</div></code></code></pre>
+<blockquote>
+<p>Copy/paste the private key generated in the master server. You can show the private key with these commands :</p>
+</blockquote>
+<pre><code><code><div>cd
+cat .ssh/id_rsa
+</div></code></code></pre>
+<h4 id="step-5--confirm-hosts">Step 5 : Confirm Hosts</h4>
+<blockquote>
+<p>If everything goes well, you should see the following screen</p>
+</blockquote>
+<p><img src="file:///e:\Documents\2020-03-02-18-58-07.png" alt=""></p>
+<h4 id="step-6--choose-services">Step 6 : Choose Services</h4>
+<blockquote>
+<p>Clear the list of services</p>
+</blockquote>
+<blockquote>
+<p>Select the services you need. Only add services you will actually need because otherwise your servers will be overloaded and you might run into more configuration problems.</p>
+</blockquote>
+<blockquote>
+<p>Press next. <strong>Ambari will ask you to accept the installation of some mandatory services and will suggest other ones.</strong> Accept the mandatory ones and check if the suggested ones will be useful for your case or not. Unless you want extra security, I don't recommend installing RangerKMS since it requires additional configuration steps that are not detailed in this guide.</p>
+</blockquote>
+<h4 id="step-7--assign-masters">Step 7 : Assign Masters</h4>
+<blockquote>
+<p>For the assign masters step, I recommend leaving the defaults unless you know what you're doing. Unfortunately, there wasn't a lot of documentation nor forums talk that helped me decide myself which services should be installed where so I just trusted ambari auto selection.</p>
+</blockquote>
+<h4 id="step-8--assign-slaves-and-clients">Step 8 : Assign Slaves and Clients</h4>
+<blockquote>
+<p>For the assign slaves step, I recommend leaving the defaults unless you know what you're doing. Unfortunately, there wasn't a lot of documentation nor forums talk that helped me decide myself which services should be installed where so I just trusted ambari auto selection.</p>
+</blockquote>
+<h4 id="step-9--customize-services">Step 9 : Customize Services</h4>
+<blockquote>
+<p>Choose passwords for your services and note them down in case you might need them.</p>
+</blockquote>
+<h4 id="step-10--review">Step 10 : Review</h4>
+<blockquote>
+<p>Review. You have the ability to save a blueprint of your server at this step. I never used a blueprint but I downloaded it in case something went wrong.</p>
+<p><strong>A blueprint is a file that stores your configuration and that can be reused to automate the cluster installation.</strong> For more info on blueprints, please see the documentation :<br>
+<a href="https://cwiki.apache.org/confluence/display/AMBARI/Blueprints">https://cwiki.apache.org/confluence/display/AMBARI/Blueprints</a></p>
+</blockquote>
+<h4 id="step-11--install">Step 11 : Install</h4>
+<blockquote>
+<p>Install ! This step might take some time so go grab a coffee or netflix and chill in the meantime.</p>
+</blockquote>
+<br>
+</div>
+<h3 id="b-increase-yarn-capacity-scheduler-maximum-resource-percent">b. Increase YARN capacity scheduler maximum resource percent</h3>
+<hr>
+<br>
+<div class="indented-section">
+<blockquote>
+<p>Navigate to <strong>Ambari Dashboard&gt;YARN&gt;Configs&gt;Advanced&gt;Scheduler</strong>.<br>
+Modify <em>yarn.scheduler.capacity.maximum-am-resource-percent</em> value to something like 0.8~0.9 .<br>
+Save and restart YARN service.</p>
+</blockquote>
+</div>
+</body>
+
+    </body>
+    </html>
